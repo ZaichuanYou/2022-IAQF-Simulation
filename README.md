@@ -3,7 +3,7 @@ This is a simulation of 2022 IAQF competition.
 
 
 
-
-Using Trees
-
-Zedong Chen
+Data used:
+VIXCLS: CBOE Volatility Index: VIX
+FGVIP: Federal government current expenditures: Interest payments
+DEXCHUS: Chinese Yuan Renminbi to U.S. Dollar Spot Exchange Rate
