@@ -54,6 +54,7 @@ class MyStrategy(bt.Strategy):
 
     def __init__(self):
         self.index = self.datas[0].index
+        self.order_refs = {}
 
 
     def next(self):
@@ -67,19 +68,22 @@ class MyStrategy(bt.Strategy):
 
         if (self.index[0]==1)&(self.getposition().size<0):
             self.close()
-            self.order = self.buy(size=size)
+            order = self.buy(size=size)
+            self.order_refs[order.ref] = "buy"
         elif (self.index[0]==1)&(self.getposition().size==0):
-            self.log(True)
-            self.order = self.buy(size=size)
+            order = self.buy(size=size)
+            self.order_refs[order.ref] = "buy"
 
         if (self.index[0]==0)&(self.getposition().size!=0):
             self.close()
 
         if (self.index[0]==-1)&(self.getposition().size>0):
             self.close()
-            self.order = self.sell(size=size)
+            order = self.sell(size=size)
+            self.order_refs[order.ref] = "sell"
         elif (self.index[0]==-1)&(self.getposition().size==0):
-            self.order = self.sell(size=size)
+            order = self.sell(size=size)
+            self.order_refs[order.ref] = "sell"
 
 
     def log(self, txt, dt=None):
@@ -87,7 +91,7 @@ class MyStrategy(bt.Strategy):
         time = None or self.datas[0].datetime.time(0)
         print(f'{dt.isoformat()} {time.isoformat()},{txt}')
 
-    #记录交易执行情况（可省略，默认不输出结果）
+    # 记录交易执行情况（可省略，默认不输出结果）
     def notify_order(self, order):
         # 如果order为submitted/accepted,返回空
         if order.status in [order.Submitted, order.Accepted]:
@@ -96,6 +100,7 @@ class MyStrategy(bt.Strategy):
         if order.status in [order.Completed]:
             if order.isbuy():
                 self.log(f'买入:{order.data._name}\n价格:{order.executed.price:.2f},\
+                发起：{self.order_refs[order.ref] if order.ref in self.order_refs else "close"},\
                 成本:{order.executed.value:.2f},\
                 手续费:{order.executed.comm:.2f}')
 
@@ -103,9 +108,10 @@ class MyStrategy(bt.Strategy):
                 self.buycomm = order.executed.comm
             else:
                 self.log(f'卖出:{order.data._name}\n价格:{order.executed.price:.2f},\
+                发起：{self.order_refs[order.ref] if order.ref in self.order_refs else "close"},\
                 成本: {order.executed.value:.2f},\
                 手续费{order.executed.comm:.2f}')
-
+            if order.ref in self.order_refs: del self.order_refs[order.ref] 
             self.bar_executed = len(self)
 
         # 如果指令取消/交易失败, 报告结果

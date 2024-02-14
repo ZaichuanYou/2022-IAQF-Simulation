@@ -4,18 +4,15 @@ import logging
 import numpy as np
 import pandas as pd
 
-def backTest(Russell3000, start_date, end_date, logger):
+def backTest(data, start_date, end_date, logger):
     """
         Conduct the backtest using given parameters
 
         params:
-            name: name of current group
-            save: save the result to a csv file or not
-            group: current group
-            data_dir: directory of data source
-            result_dir: directory which will be use to save the data
+            data: directory of data source   
+            start_date: starting data of data
+            end_date: ending date of data         
             logger: the universal logger
-            prob: default is one, fraction of data that will be accept by the program
     """
     cerebro = bt.Cerebro()
 
@@ -28,8 +25,8 @@ def backTest(Russell3000, start_date, end_date, logger):
 
     cerebro.addsizer(bt.sizers.FixedSize, stake=100)
 
-    Russell3000_df = GenericCSV_extend(
-        dataname=Russell3000,
+    data_df = GenericCSV_extend(
+        dataname=data,
         fromdate=start_date,
         todate=end_date,
         dtformat = '%Y-%m-%d',
@@ -42,7 +39,7 @@ def backTest(Russell3000, start_date, end_date, logger):
         volume=-1,
         openinterest=-1
         )
-    cerebro.adddata(Russell3000_df)
+    cerebro.adddata(data_df)
 
     # 将初始本金设为100w
     cerebro.broker.setcash(1000000.0)
@@ -57,12 +54,9 @@ def backTest(Russell3000, start_date, end_date, logger):
     risk_free_rate = 0.017
     risk_free_rate_daily = (1 + risk_free_rate)**(1/252) - 1
     df = pd.DataFrame({"Account value":result[0].p.account_value})
+    df["Time"] = pd.to_datetime(pd.read_csv(data)["Date"])
     df['Account value'] = df['Account value']-500000
     df['Return'] = df['Account value'].pct_change()
-    # Annual risk free rate
-    risk_free_rate_annual = 0.017  # 1.7%
-    # Convert annual risk free rate to daily
-    risk_free_rate_daily = (1 + risk_free_rate_annual)**(1/252) - 1
     # Calculate the excess returns by subtracting the daily risk-free rate from the daily returns
     df['Excess Return'] = df['Return'] - risk_free_rate_daily
     # Calculate the Sharpe Ratio
@@ -88,8 +82,15 @@ def backTest(Russell3000, start_date, end_date, logger):
 
     cerebro.plot(volume=False)
 
-    plt.plot(account_value, label="Account value")
-    plt.plot(total_trend, label="Market trend")
+    plt.plot(df["Time"], account_value, label="Account value")
+    plt.plot(df["Time"],total_trend, label="Market trend")
+    plt.xticks(rotation=45)
     plt.title("Account value compared to market trend")
+    plt.legend()
+    plt.show()
+
+    plt.plot(df["Time"], account_value-total_trend, label="Excess return")
+    plt.xticks(rotation=45)
+    plt.title("Excess return of strategy")
     plt.legend()
     plt.show()
